@@ -63,6 +63,42 @@ function attachEventListeners() {
         btnBatch.classList.remove('active');
         updateDashboard();
     });
+
+    document.getElementById('clear-filters').addEventListener('click', () => {
+        document.getElementById('search-input').value = '';
+        document.getElementById('day-filter').value = '';
+        document.getElementById('room-filter').value = '';
+        updateDashboard();
+    });
+}
+
+function isSlotMatch(slot, batch, term, day, room) {
+    const dMatch = !day || slot.day === day;
+    const rMatch = !room || slot.room === room || (batch.room === room && (!slot.room || slot.room === 'Unknown'));
+    
+    if (!term) return dMatch && rMatch;
+
+    const course = batch.courses ? batch.courses.find(c => c.code === slot.course_code) : null;
+    
+    // Special case for AI abbreviation
+    const isAI = term === 'ai';
+    const aiMatch = isAI && (
+        (slot.course_code || "").toLowerCase().includes('0613-401') ||
+        (course && (course.name || "").toLowerCase().includes('artificial intelligence'))
+    );
+
+    const textMatch = aiMatch ||
+        (slot.course_code || "").toLowerCase().includes(term) ||
+        (slot.day || "").toLowerCase().includes(term) ||
+        (slot.time || "").toLowerCase().includes(term) ||
+        (slot.room || "").toLowerCase().includes(term) ||
+        (batch.name || "").toLowerCase().includes(term) ||
+        (course && (
+            (course.name || "").toLowerCase().includes(term) || 
+            (course.teacher || "").toLowerCase().includes(term)
+        ));
+
+    return dMatch && rMatch && textMatch;
 }
 
 function updateDashboard() {
@@ -72,53 +108,33 @@ function updateDashboard() {
 
     if (currentView === 'batch') {
         const filteredBatches = routinesData.filter(batch => {
-            // Check basic info
-            const basicMatch = !term || 
+            const hasMatchingSlot = (batch.schedule || []).some(s => isSlotMatch(s, batch, term, day, room));
+            
+            // If filters are active, we must have a matching slot
+            if (day || room) return hasMatchingSlot;
+
+            // Otherwise, search can match batch info OR course info OR any slot
+            const batchMatch = !term || 
                 (batch.name || "").toLowerCase().includes(term) || 
                 (batch.semester || "").toLowerCase().includes(term) || 
                 (batch.counsellor || "").toLowerCase().includes(term);
 
-            // Check courses (for term)
             const courseMatch = !term || (batch.courses && batch.courses.some(c => 
                 (c.name || "").toLowerCase().includes(term) || 
                 (c.code || "").toLowerCase().includes(term) || 
                 (c.teacher || "").toLowerCase().includes(term)
             ));
 
-            // Check schedule (for Day, Room, and Term)
-            const scheduleMatch = (batch.schedule || []).some(s => {
-                const dMatch = !day || s.day === day;
-                const rMatch = !room || s.room === room || batch.room === room;
-                const tMatch = !term || (s.course_code || "").toLowerCase().includes(term) || (s.time || "").toLowerCase().includes(term);
-                return dMatch && rMatch && tMatch;
-            });
-
-            // If we have filters active (day/room), we MUST have a schedule match
-            if (day || room) return scheduleMatch;
-            
-            return basicMatch || courseMatch || scheduleMatch;
+            return batchMatch || courseMatch || hasMatchingSlot;
         });
         renderBatchView(filteredBatches);
     } else {
-        // Finder View: Flat list of all sessions across all batches
         const allSlots = [];
         routinesData.forEach(batch => {
             if (batch.schedule) {
                 batch.schedule.forEach(slot => {
-                    const dMatch = !day || slot.day === day;
-                    const rMatch = !room || slot.room === room;
-                    
-                    // For Finder View, if term is set, it can match anything in the slot or batch info
-                    const course = batch.courses ? batch.courses.find(c => c.code === slot.course_code) : null;
-                    const textMatch = !term || 
-                        (slot.course_code || "").toLowerCase().includes(term) ||
-                        (slot.day || "").toLowerCase().includes(term) ||
-                        (slot.time || "").toLowerCase().includes(term) ||
-                        (slot.room || "").toLowerCase().includes(term) ||
-                        (batch.name || "").toLowerCase().includes(term) ||
-                        (course && (course.name.toLowerCase().includes(term) || course.teacher.toLowerCase().includes(term)));
-
-                    if (dMatch && rMatch && textMatch) {
+                    if (isSlotMatch(slot, batch, term, day, room)) {
+                        const course = batch.courses ? batch.courses.find(c => c.code === slot.course_code) : null;
                         allSlots.push({ ...slot, batchName: batch.name, course: course });
                     }
                 });
@@ -140,16 +156,7 @@ function renderBatchView(batches) {
     }
 
     container.innerHTML = batches.map(batch => {
-        // Filter schedule items within the batch if filters are active
-        const displaySchedule = (batch.schedule || []).filter(s => {
-            const dMatch = !day || s.day === day;
-            const rMatch = !room || s.room === room;
-            const course = batch.courses ? batch.courses.find(c => c.code === s.course_code) : null;
-            const textMatch = !term || 
-                s.course_code.toLowerCase().includes(term) ||
-                (course && (course.name.toLowerCase().includes(term) || course.teacher.toLowerCase().includes(term)));
-            return dMatch && rMatch && textMatch;
-        });
+        const displaySchedule = (batch.schedule || []).filter(s => isSlotMatch(s, batch, term, day, room));
 
         if (displaySchedule.length === 0) return '';
 

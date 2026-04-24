@@ -87,8 +87,10 @@ p.subtitle {
     display: flex;
     flex-direction: column;
     gap: 25px;
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(30px);
     border: 1px solid var(--border-color);
+    position: relative;
+    z-index: 100;
 }
 
 .search-section {
@@ -137,23 +139,33 @@ select {
     padding: 14px 20px;
     border-radius: 12px;
     border: 1px solid var(--border-color);
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(15, 23, 42, 0.6);
     color: var(--text-color);
     font-size: 1rem;
     flex: 1;
-    min-width: 200px;
+    min-width: 220px;
     cursor: pointer;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 15px center;
     background-size: 18px;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-select:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+select:hover, select:focus {
+    background-color: rgba(30, 41, 59, 0.8);
     border-color: var(--primary-light);
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(109, 169, 228, 0.1);
+}
+
+/* Explicit styling for dropdown options to prevent browser-default color issues */
+select option {
+    background-color: #0f172a;
+    color: #f8fafc;
+    padding: 12px;
+    font-family: 'Inter', sans-serif;
 }
 
 .view-toggle {
@@ -180,6 +192,27 @@ select:hover {
     background: var(--gradient);
     color: white;
     box-shadow: 0 4px 15px rgba(52, 109, 180, 0.4);
+}
+
+.clear-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 12px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.clear-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+    color: #ef4444;
 }
 
 /* Dashboard Grid */
